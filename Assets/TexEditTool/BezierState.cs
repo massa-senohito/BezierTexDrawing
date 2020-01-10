@@ -23,14 +23,19 @@ public class MoveHandleValue
 public class BezierState
 {
     List<Unit> Holding = new List<Unit>();
-    enum BezierInputState
+    public enum BezierInputState
     {
         Normal,
         MoveLastHandle,
+        ObjSelect,
         ObjMove,
     }
 
-    BezierInputState InputState;
+    public BezierInputState InputState
+    {
+        get;
+        private set;
+    }
 
     void MoveState(BezierInputState state)
     {
@@ -38,7 +43,7 @@ public class BezierState
         {
             return;
         }
-        Debug.Log( "MoveState : " + state );
+        //Debug.Log( "MoveState : " + state );
         InputState = state;
     }
 
@@ -71,36 +76,23 @@ public class BezierState
         bool clicking = Input.GetMouseButton( 0 );
         bool isCtrl = Input.GetKey(KeyCode.LeftControl);
         V3 worldPos = BezierPath.WorldMousePosition();
-#if OLD
-        //if ( onclick && !isCtrl && !isNearObj )
-        {
-            AddPathPoint( worldPos );
-        }
-        if ( onclick && isCtrl )
-        {
-            // 近いのを動かす
-        }
-       // if(clicking && !isNearObj)
-        {
-            //MoveHandle( worldPos );
-        }
-#endif
 
         bool isHolding = Holding.Count > 0;
         float nearDist = 0.08f;
+        var obj = mayObj.ValueOr(()=>null);
+
         switch ( InputState )
         {
             case BezierInputState.Normal:
-                // クリックしたとき、周りに何もない
                 bool isNear = dist < nearDist;
                 if ( isNear )
                 {
                     isNear = mayObj.HasValue;
                 }
+                // 近くにオブジェクトがあるなら移動モードへ遷移
                 if ( mayObj.HasValue && isNear && onclick)
                 {
-                    var obj = mayObj.ValueOr(()=>null);
-                    MoveState( BezierInputState.ObjMove );
+                    MoveState( BezierInputState.ObjSelect);
                     ActiveObjectChanged.OnNext( obj );
                     Debug.Log( "StartMove : " + obj.name );
                     Holding.Add( obj );
@@ -111,6 +103,9 @@ public class BezierState
                     MoveState( BezierInputState.MoveLastHandle );
                 }
                 break;
+            case BezierInputState.ObjSelect:
+                OnObjSelect( mayObj , onclick , obj );
+                break;
             case BezierInputState.MoveLastHandle:
             case BezierInputState.ObjMove:
                 Moving( clicking , worldPos );
@@ -119,6 +114,26 @@ public class BezierState
                 break;
         }
         IsPressedOld = clicking;
+    }
+
+    private void OnObjSelect( Option<Unit> mayObj , bool onclick , Unit obj )
+    {
+        // ドラッグ時、すぐにポイントが移動すると操作しにくい
+        // １度ボタンから指が離されていてActiveなオブジェクトが再度ドラッグされたら
+        if ( onclick )
+        {
+            if ( mayObj.HasValue )
+            {
+                if ( Holding.Contains( obj ) )
+                {
+                    MoveState( BezierInputState.ObjMove );
+                }
+                else
+                {
+                    ActiveObjectChanged.OnNext( obj );
+                }
+            }
+        }
     }
 
     private void Moving( bool clicking , V3 worldPos )

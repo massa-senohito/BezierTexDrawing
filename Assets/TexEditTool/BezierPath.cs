@@ -243,6 +243,14 @@ public class BezierPath : MonoBehaviour
             return HandleObjList[ 1 ];
         }
 
+        public string PointName
+        {
+            get
+            {
+                return Point( ).name;
+            }
+        }
+
         Option<Unit> TryGetPreHandle()
         {
             if(HandleObjList.Length == 3)
@@ -282,12 +290,10 @@ public class BezierPath : MonoBehaviour
                 cpoint1 ,
                 handle01 ,
             };
-            IDHandleMap.Add( Counter , new HandleContainer(collection) );
-            objects.AddRange( collection );
-            Counter++;
+            AddPointAndHandle( collection );
             return;
         }
-        
+
         var cpoint = SpawnCube(pos);
         cpoint.name = "cpointC," + Counter;
         var handle0 = SpawnCube(pos);
@@ -299,10 +305,17 @@ public class BezierPath : MonoBehaviour
             cpoint ,
             handle1 ,
         };
-        IDHandleMap.Add( Counter , new HandleContainer(collection1) );
+        AddPointAndHandle( collection1 );
+    }
 
-        objects.AddRange( collection1 );
+    private void AddPointAndHandle( Unit[ ] collection )
+    {
+
+        IDHandleMap.Add( Counter , new HandleContainer( collection ) );
+        objects.AddRange( collection );
         Counter++;
+        // 他のクリックされていないオブジェクトを消す
+        UpdateSelection( collection[ 0 ].name );
     }
 
     void MoveLastHandle(V3 world)
@@ -324,6 +337,7 @@ public class BezierPath : MonoBehaviour
     }
 
     Option<int> MayActiveBezierId;
+
     void OnActiveObjChanged(Unit unit)
     {
         var nameIDList = unit.name.Split( ',' );
@@ -340,7 +354,7 @@ public class BezierPath : MonoBehaviour
         var id = 0;
         // クリックされてないオブジェクトをすべて消す
         MayActiveBezierId.MatchSome
-            ( oldId => IDHandleMap[ oldId ].SetActive( false ) );
+            ( SetDeactive );
 
         if ( int.TryParse( nameId , out id ) )
         {
@@ -348,6 +362,13 @@ public class BezierPath : MonoBehaviour
             activeObjList.SetActive( true );
             MayActiveBezierId = id.Some( );
         }
+    }
+
+    private void SetDeactive( int oldId )
+    {
+        HandleContainer handleContainer = IDHandleMap[ oldId ];
+        handleContainer.SetActive( false );
+        Debug.Log( oldId + " : " + handleContainer.PointName );
     }
 
     // Use this for initialization
@@ -388,10 +409,12 @@ public class BezierPath : MonoBehaviour
     }
 
     BezierState State;
+    [SerializeField]
+    BezierState.BezierInputState InputState;
 
     private void Update( )
     {
-
+        InputState = State.InputState;
         V3 worldPos = BezierPath.WorldMousePosition();
         float dist = 1;
         var mayNearObj = NearestObj( worldPos ,out dist);
