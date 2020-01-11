@@ -1,34 +1,38 @@
-﻿using System.Collections;
+﻿using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
-using Point = UnityEngine.Vector2;
+using Point = UnityEngine.Vector3;
 public class PathSelector : MonoBehaviour
 {
-    enum InOut
+    public enum InOut
     {
         OUT,
         ON,
         IN
     }
+    public static bool IsIn(InOut inout)
+    {
+        return inout == InOut.IN;
+    }
 
     //435
-    float cross( Point p , Point q ) { return p.x * q.y - p.y * q.x; }
-    float dot( Point p , Point q ) { return p.x * q.x + p.y * q.y; }
+    static float cross( Point p , Point q ) { return p.x * q.y - p.y * q.x; }
+    static float dot( Point p , Point q ) { return p.x * q.x + p.y * q.y; }
     const double EPS = 1e-8;
 
-    int sign( double x )
+    static int sign( double x )
     {
         if ( x < -EPS ) return -1;
         if ( x > +EPS ) return +1;
         return 0;
     }
 
-    InOut contains( Point[] ps , Point p )
+    public static InOut Contains( List<Point> ps , Point p )
     {
         bool isIn = false;
-        for ( int i = 0 ; i < ps.Length ; ++i )
+        for ( int i = 0 ; i < ps.Count; ++i )
         {
-            int j = (i+1 == ps.Length ? 0 : i+1);
+            int j = (i+1 == ps.Count ? 0 : i+1);
             Point a = ps[i] - p, b = ps[j] - p;
             if ( a.y > b.y ) {
                 var temp = a;
@@ -81,10 +85,10 @@ public class PathSelector : MonoBehaviour
             new Point(10,2) ,
             new Point()
         };
-        MakeTestCube( poly );
+        MakeTestCube( poly.ToList() );
     }
 
-    private void MakeTestCube( Point[ ] poly )
+    private void MakeTestCube( List<Point> poly )
     {
         for ( int i = 0 ; i < Size ; i++ )
         {
@@ -93,7 +97,7 @@ public class PathSelector : MonoBehaviour
                 var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 Point vector2 = new Point( i , j );
                 cube.transform.position = vector2;
-                if ( contains( poly , vector2 ) == InOut.IN )
+                if ( Contains( poly , vector2 ) == InOut.IN )
                 {
                     cube.transform.position = new Vector3( 9 , 9 , 9 );
                 }

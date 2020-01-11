@@ -1,9 +1,13 @@
-﻿using UnityEngine;
+﻿#define  CUBETEST
+
+using UnityEngine;
 using System.Linq;
 using UniRx;
 using System.Collections.Generic;
 using Optional;
-using Unit = UnityEngine.GameObject;
+using Unit =
+    //UnityEngine.GameObject;
+    EntityBase;
 using Gobj = UnityEngine.GameObject;
 using V3 = UnityEngine.Vector3;
 
@@ -12,13 +16,13 @@ public class BezierPath : MonoBehaviour
 
     public class Bezier
     {
-        public List<Vector3> pathPoints;
+        public List<V3> pathPoints;
         private int segments;
         public int pointCount;
 
         public Bezier( )
         {
-            pathPoints = new List<Vector3>( );
+            pathPoints = new List<V3>( );
             pointCount = 100;
         }
 
@@ -27,7 +31,7 @@ public class BezierPath : MonoBehaviour
             pathPoints.Clear( );
         }
 
-        Vector3 BezierPathCalculation( Vector3 p0 , Vector3 p1 , Vector3 p2 , Vector3 p3 , float t )
+        V3 BezierPathCalculation( V3 p0 , V3 p1 , V3 p2 , V3 p3 , float t )
         {
             float tt = t * t;
             float ttt = t * tt;
@@ -35,7 +39,7 @@ public class BezierPath : MonoBehaviour
             float uu = u * u;
             float uuu = u * uu;
 
-            Vector3 B = new Vector3();
+            V3 B = new V3();
             B = uuu * p0;
             B += 3.0f * uu * t * p1;
             B += 3.0f * u * tt * p2;
@@ -44,16 +48,16 @@ public class BezierPath : MonoBehaviour
             return B;
         }
 
-        public void CreateCurve( List<Vector3> controlPoints )
+        public void CreateCurve( List<V3> controlPoints )
         {
             segments = controlPoints.Count / 3;
 
             for ( int s = 0 ; s < controlPoints.Count - 3 ; s += 3 )
             {
-                Vector3 p0 = controlPoints[s];
-                Vector3 p1 = controlPoints[s+1];
-                Vector3 p2 = controlPoints[s+2];
-                Vector3 p3 = controlPoints[s+3];
+                V3 p0 = controlPoints[s];
+                V3 p1 = controlPoints[s+1];
+                V3 p2 = controlPoints[s+2];
+                V3 p3 = controlPoints[s+3];
 
                 if ( s == 0 )
                 {
@@ -63,7 +67,7 @@ public class BezierPath : MonoBehaviour
                 for ( int p = 0 ; p < ( pointCount / segments ) ; p++ )
                 {
                     float t = (1.0f / (pointCount/segments)) * p;
-                    Vector3 point = new Vector3 ();
+                    V3 point = new V3 ();
                     point = BezierPathCalculation( p0 , p1 , p2 , p3 , t );
                     pathPoints.Add( point );
                 }
@@ -99,8 +103,8 @@ public class BezierPath : MonoBehaviour
         //Debug.Log( "pC : " + path.pointCount );
         for ( int i = 1 ; i < ( path.pointCount ) ; i++ )
         {
-            Vector3 start = path.pathPoints[i-1];
-            Vector3 end = path.pathPoints[i];
+            V3 start = path.pathPoints[i-1];
+            V3 end = path.pathPoints[i];
             lines.SetPosition( i - 1 , start );
             if(lines.positionCount <= i)
             {
@@ -112,12 +116,12 @@ public class BezierPath : MonoBehaviour
 
     private void UpdatePath( )
     {
-        List<V3> c = new List<Vector3>();
+        List<V3> c = new List<V3>();
         for ( int o = 0 ; o < Len(objects) ; o++ )
         {
             if ( objects[ o ] != null )
             {
-                Vector3 p = objects[o].transform.position;
+                V3 p = objects[o].transform.position;
                 c.Add( p );
             }
         }
@@ -129,7 +133,8 @@ public class BezierPath : MonoBehaviour
     public Material shader;
     Bezier path = new Bezier();
     public List<Unit> objects;
-    Gobj NearObject( V3 pos , Gobj obj0 , Gobj obj1 )
+
+    Unit NearObject( V3 pos , Unit obj0 , Unit obj1 )
     {
         var near0 = V3.Distance(pos ,
             obj0.transform.position);
@@ -147,13 +152,13 @@ public class BezierPath : MonoBehaviour
 
         for ( int o = 0 ; o < objects.Count ; o+=3 )
         {
-            Gobj obj0 = objects[ o + 1 ];
-            Gobj obj1 = objects[ o + 2 ];
-            Gobj obj = NearObject(pos,obj0,obj1);
+            var obj0 = objects[ o + 1 ];
+            var obj1 = objects[ o + 2 ];
+            var obj = NearObject(pos,obj0,obj1);
             //if ( obj1 != null )
             {
-                Vector3 p = objects[o].transform.position;
-                float dist = Vector3.Distance( pos , p );
+                V3 p = objects[o].transform.position;
+                float dist = V3.Distance( pos , p );
                 if(!nearestObj.HasValue)
                 {
                     nearestObj = obj.Some();
@@ -178,11 +183,11 @@ public class BezierPath : MonoBehaviour
         distance = nearestDistance;
         for ( int o = 0 ; o < objects.Count ; o++ )
         {
-            Gobj obj = objects[ o ];
+            var obj = objects[ o ];
             //if ( obj1 != null )
             {
-                Vector3 p = objects[o].transform.position;
-                float dist = Vector3.Distance( pos , p );
+                V3 p = objects[o].transform.position;
+                float dist = V3.Distance( pos , p );
                 if(!nearestObj.HasValue)
                 {
                     nearestObj = obj.Some();
@@ -204,14 +209,15 @@ public class BezierPath : MonoBehaviour
 
     public static float CameraOffset = 2;
 
-    public static Gobj SpawnCube( V3 pos )
+    public static Unit SpawnCube( V3 pos )
     {
         var obj = Gobj.CreatePrimitive(PrimitiveType.Cube);
         obj.transform.position = pos;
         var p = obj.transform.position;
         obj.transform.position = new V3( p.x , p.y , CameraOffset);
         obj.transform.localScale = new V3( 0.1f , 0.1f , 0.1f);
-        return obj;
+        var unit = obj.AddComponent<Unit>( );
+        return unit;
     }
 
     void MoveAround( V3 world , V3 orig , Unit target )
@@ -231,7 +237,8 @@ public class BezierPath : MonoBehaviour
         public void SetActive(bool isActive)
         {
             TryGetPreHandle( ).MatchSome( obj => obj.SetActive( isActive ) );
-            GetNextHandle( ).SetActive( isActive );
+            var handle = GetNextHandle( );
+            handle.SetActive( isActive );
         }
 
         public Unit Point()
@@ -368,7 +375,7 @@ public class BezierPath : MonoBehaviour
     {
         HandleContainer handleContainer = IDHandleMap[ oldId ];
         handleContainer.SetActive( false );
-        Debug.Log( oldId + " : " + handleContainer.PointName );
+        Debug.Log( "SetDeactive " + oldId + " : " + handleContainer.PointName );
     }
 
     // Use this for initialization
@@ -377,6 +384,25 @@ public class BezierPath : MonoBehaviour
         //UpdatePath( );
         State = new BezierState( OnAddPoint , OnMoveHandle , OnMoveLastHandle );
         State.ActiveObjectChanged.Subscribe( OnActiveObjChanged );
+
+#if CUBETEST
+        TestCubeList = new Unit[ Size , Size ];
+        var parent = new Gobj();
+        var upar = Unit.SetEntity( parent );
+        upar.name = "TestParent";
+        for ( int i = 0 ; i < Size ; i++ )
+        {
+            for ( int j = 0 ; j < Size ; j++ )
+            {
+                var cube = SpawnCube( new V3 ( i , j ) );
+                cube.SetOffset( -5 , -5 , 1.5f );
+                cube.SetParent( upar , true );
+                cube.SetUnitScale( 0.5f );
+                TestCubeList[ i , j ] = cube;
+            }
+        }
+#endif
+
     }
 
     public static V3 WorldMousePosition()
@@ -414,7 +440,6 @@ public class BezierPath : MonoBehaviour
 
     private void Update( )
     {
-        InputState = State.InputState;
         V3 worldPos = BezierPath.WorldMousePosition();
         float dist = 1;
         var mayNearObj = NearestObj( worldPos ,out dist);
@@ -427,6 +452,17 @@ public class BezierPath : MonoBehaviour
 #endif
         State.Tick( mayNearObj , dist );
 
+    }
+
+#if CUBETEST
+    const int Size = 16;
+    Unit[,] TestCubeList ;
+#endif
+
+    public void FixedUpdate( )
+    {
+        InputState = State.InputState;
+
         UpdatePath( );
         for ( int i = 1 ; i < ( path.pointCount ) ; i++ )
         {
@@ -435,20 +471,38 @@ public class BezierPath : MonoBehaviour
             {
                 return;
             }
-            Vector3 startv = path.pathPoints[i-1];
-            Vector3 endv = path.pathPoints[i];
+            V3 startv = path.pathPoints[i-1];
+            V3 endv = path.pathPoints[i];
             createLine( 0.05f , Color.blue );
         }
-        
+#if CUBETEST
+        for ( int i = 0 ; i < Size ; i++ )
+        {
+            for ( int j = 0 ; j < Size ; j++ )
+            {
+                var cube = TestCubeList[i , j];
+                var point = cube.GetPos();
+                if ( PathSelector.IsIn( PathSelector.Contains(path.pathPoints , point ) ) )
+                {
+                    cube.SetColor(Color.red);
+                }
+                else
+                {
+                    cube.SetColor( Color.black);
+                }
+            }
+        }
+#endif
+
     }
 
-    public IEnumerable<Vector3> PathPolygon( )
+    public IEnumerable<V3> PathPolygon( )
     {
         UpdatePath( );
         for ( int i = 1 ; i < ( path.pointCount ) ; i++ )
         {
-            Vector3 startv = path.pathPoints[i-1];
-            Vector3 endv = path.pathPoints[i];
+            V3 startv = path.pathPoints[i-1];
+            V3 endv = path.pathPoints[i];
             yield return startv;
             yield return endv;
             //createLine( startv , endv , 0.25f , Color.blue );
@@ -467,8 +521,8 @@ public class BezierPath : MonoBehaviour
             {
                 //return;
             }
-            Vector3 startv = path.pathPoints[i-1];
-            Vector3 endv = path.pathPoints[i];
+            V3 startv = path.pathPoints[i-1];
+            V3 endv = path.pathPoints[i];
             Gizmos.color = Color.blue;
             Gizmos.DrawLine( startv , endv );
         }

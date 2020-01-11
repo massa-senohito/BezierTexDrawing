@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-using Unit = UnityEngine.GameObject;
+using Unit = EntityBase;
 using Gobj = UnityEngine.GameObject;
 using V3 = UnityEngine.Vector3;
 using UniRx;
@@ -12,7 +12,7 @@ using AddPointValue =
 
 public class MoveHandleValue
 {
-    public List<Gobj> Obj;
+    public List<Unit> Obj;
     public V3 WorldPos;
     public bool IsMoved( V3 v )
     {
