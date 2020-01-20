@@ -9,6 +9,7 @@ using UnityEngine;
 #endif
 using Scaler = System.Int32;
 using System.Linq;
+using UnityEngine.Profiling;
 
 #if UNI
 #else
@@ -18,58 +19,58 @@ public class MonoBehaviour { }
 #endif
 public class FillPolygon //: MonoBehaviour
 {
-    Vector2[] Poly = new Vector2[]
-    {
-        new Vector2(185,467),
-        new Vector2(167,474),
-        new Vector2(184,476),
-        new Vector2(227,454),
-        new Vector2(244,419),
-        new Vector2(247,382),
-        new Vector2(263,368),
-        new Vector2(317,365),
-        new Vector2(331,370),
-        new Vector2(350,367),
-        new Vector2(383,358),
-        new Vector2(405,341),
-        new Vector2(436,333),
-        new Vector2(499,308),
-        new Vector2(525,308),
-        new Vector2(582,301),
-        new Vector2(511,285),
-        new Vector2(395,311),
-        new Vector2(365,305),
-        new Vector2(389,274),
-        new Vector2(385,265),
-        new Vector2(359,263),
-        new Vector2(360,269),
-        new Vector2(366,270),
-        new Vector2(350,297),
-        new Vector2(349,270),
-        new Vector2(322,264),
-        new Vector2(322,269),
-        new Vector2(328,271),
-        new Vector2(323,297),
-        new Vector2(292,296),
-        new Vector2(293,271),
-        new Vector2(274,267),
-        new Vector2(271,300),
-        new Vector2(260,282),
-        new Vector2(258,265),
-        new Vector2(233,262),
-        new Vector2(245,290),
-        new Vector2(244,309),
-        new Vector2(229,324),
-        new Vector2(236,339),
-        new Vector2(211,370),
-        new Vector2(222,405),
-        new Vector2(222,430),
-        new Vector2(198,453),
-        new Vector2(170,464),
-        new Vector2(171,472),
-        new Vector2(183,468),
-        new Vector2(185,467),
-    };
+    //Vector2[] Poly = new Vector2[]
+    //{
+    //    new Vector2(185,467),
+    //    new Vector2(167,474),
+    //    new Vector2(184,476),
+    //    new Vector2(227,454),
+    //    new Vector2(244,419),
+    //    new Vector2(247,382),
+    //    new Vector2(263,368),
+    //    new Vector2(317,365),
+    //    new Vector2(331,370),
+    //    new Vector2(350,367),
+    //    new Vector2(383,358),
+    //    new Vector2(405,341),
+    //    new Vector2(436,333),
+    //    new Vector2(499,308),
+    //    new Vector2(525,308),
+    //    new Vector2(582,301),
+    //    new Vector2(511,285),
+    //    new Vector2(395,311),
+    //    new Vector2(365,305),
+    //    new Vector2(389,274),
+    //    new Vector2(385,265),
+    //    new Vector2(359,263),
+    //    new Vector2(360,269),
+    //    new Vector2(366,270),
+    //    new Vector2(350,297),
+    //    new Vector2(349,270),
+    //    new Vector2(322,264),
+    //    new Vector2(322,269),
+    //    new Vector2(328,271),
+    //    new Vector2(323,297),
+    //    new Vector2(292,296),
+    //    new Vector2(293,271),
+    //    new Vector2(274,267),
+    //    new Vector2(271,300),
+    //    new Vector2(260,282),
+    //    new Vector2(258,265),
+    //    new Vector2(233,262),
+    //    new Vector2(245,290),
+    //    new Vector2(244,309),
+    //    new Vector2(229,324),
+    //    new Vector2(236,339),
+    //    new Vector2(211,370),
+    //    new Vector2(222,405),
+    //    new Vector2(222,430),
+    //    new Vector2(198,453),
+    //    new Vector2(170,464),
+    //    new Vector2(171,472),
+    //    new Vector2(183,468),
+    //    new Vector2(185,467),
+    //};
 
     static void printf( string s , params object[ ] p )
     {
@@ -94,7 +95,7 @@ public class FillPolygon //: MonoBehaviour
     //https://www.geeksforgeeks.org/scan-line-polygon-filling-using-opengl-c/
     const int maxHt = TexEditor.Size;
     const int maxWd  = 32;
-    const int maxVer = 1000 ;
+    const int MaxVer = 1000 ;
 
     FileStream fp;
 
@@ -122,6 +123,7 @@ public class FillPolygon //: MonoBehaviour
         {
             buckets = //new EdgeBucket[ maxVer ];
                 Enumerable.Range( 0 , maxVer ).Select( i => new EdgeBucket( ) ).ToArray( );
+            //System.Array.
             countEdgeBucket = 0;
         }
         public override string ToString()
@@ -131,7 +133,7 @@ public class FillPolygon //: MonoBehaviour
     }
 
     EdgeTableTuple[] EdgeTable ;
-    EdgeTableTuple ActiveEdgeTuple = new EdgeTableTuple(maxVer);
+    EdgeTableTuple ActiveEdgeTuple = new EdgeTableTuple(MaxVer);
 
     // Scanline Function 
     void initEdgeTable( )
@@ -244,7 +246,7 @@ public class FillPolygon //: MonoBehaviour
                 return;
 
             minv = ( float )1.0 / m;
-            printf( "\nSlope string for {0} {1} & {2} {3}: {4}" , x1 , y1 , x2 , y2 , minv );
+            //printf( "\nSlope string for {0} {1} & {2} {3}: {4}" , x1 , y1 , x2 , y2 , minv );
         }
 
         if ( y1 > y2 )
@@ -260,6 +262,7 @@ public class FillPolygon //: MonoBehaviour
             xwithyminTS = x1;
         }
         // the assignment part is done..now storage.. 
+        //Debug.Log( "storeEdgeInTable scanline " + scanline );
         storeEdgeInTuple( EdgeTable[ scanline ] , ymaxTS , xwithyminTS , minv );
 
 
@@ -272,7 +275,7 @@ public class FillPolygon //: MonoBehaviour
         {
             if ( Tup.buckets[ i ].ymax == yy )
             {
-                printf( "\nRemoved at {0}" , yy );
+                //printf( "\nRemoved at {0}" , yy );
 
                 for ( j = i ; j < Tup.countEdgeBucket - 1 ; j++ )
                 {
@@ -323,7 +326,7 @@ public class FillPolygon //: MonoBehaviour
                          ymax , ( int )EdgeTable[ i ].buckets[ j ].xofymin ,
                         EdgeTable[ i ].buckets[ j ].slopeinverse );
             }
-            printTuple( ActiveEdgeTuple );
+            //printTuple( ActiveEdgeTuple );
 
             // 2. Remove from AET those edges for  
             // which y=ymax (not involved in next scan line) 
@@ -332,7 +335,7 @@ public class FillPolygon //: MonoBehaviour
             //sort AET (remember: ET is presorted) 
             insertionSort( ActiveEdgeTuple );
 
-            printTuple( ActiveEdgeTuple );
+            //printTuple( ActiveEdgeTuple );
 
             //3. Fill lines on scan line y by using pairs of x-coords from AET 
             j = 0;
@@ -428,7 +431,7 @@ public class FillPolygon //: MonoBehaviour
             // 5. For each nonvertical edge remaining in AET, update x for new y 
             updatexbyslopeinv( ActiveEdgeTuple );
         }
-        printf( "\nScanline filling complete" );
+        //printf( "\nScanline filling complete" );
 
     }
 
@@ -473,7 +476,7 @@ public class FillPolygon //: MonoBehaviour
                 y2 = (int)p.Y;
 #endif
 
-                printf( "\n{0},{1}" , x2 , y2 );
+                //printf( "\n{0},{1}" , x2 , y2 );
                 //glBegin( GL_LINES );
                 glVertex2i( x1 , y1 , false );
                 glVertex2i( x2 , y2 , false );
@@ -488,19 +491,28 @@ public class FillPolygon //: MonoBehaviour
     {
         FilledRegion.Clear( );
 
+        CustomSampler edgeTablesampler = CustomSampler.Create("initEdgeTable");
+        CustomSampler drawDinoSampler = CustomSampler.Create("drawDino");
+        CustomSampler scanFillSampler = CustomSampler.Create("scanFillSampler");
+        edgeTablesampler.Begin( );
         initEdgeTable( );
-        drawPolyDino( poly );
-        printf( "\nTable" );
-        printTable( );
+        edgeTablesampler.End( );
 
+        drawDinoSampler.Begin( );
+        drawPolyDino( poly );
+        drawDinoSampler.End( );
+        //printf( "\nTable" );
+        //printTable( );
+        scanFillSampler.Begin( );
         ScanlineFill( );//actual calling of scanline filling.. 
+        scanFillSampler.End( );
         return FilledRegion;
     }
 
     public void drawDino( )
     {
-        var poly3D = Poly.Select( v => new Vector3( v.x , v.y ) ).ToList();
-        MakeFilledPoly( poly3D );
+        //var poly3D = Poly.Select( v => new Vector3( v.x , v.y ) ).ToList();
+        //MakeFilledPoly( poly3D );
     }
 
 
@@ -508,7 +520,7 @@ public class FillPolygon //: MonoBehaviour
     private void Start( )
     {
         EdgeTable = //new EdgeTableTuple[ maxHt ];
-            Enumerable.Range( 0 , maxHt ).Select( i => new EdgeTableTuple( maxVer ) ).ToArray( );
+            Enumerable.Range( 0 , maxHt ).Select( i => new EdgeTableTuple( MaxVer ) ).ToArray( );
         //drawDino( );
     }
     public FillPolygon()
@@ -517,29 +529,31 @@ public class FillPolygon //: MonoBehaviour
     }
 
 }
-        public class Scanline
-        {
-            public int X;
-            public int Y;
-            public int W;
+public struct Scanline
+{
+    public int X;
+    public int Y;
+    public int W;
 
-            public static IEnumerable<Scanline> ScanlineList(List<Vector3> edge)
+    public static List<Scanline> ScanlineList( List<Vector3> edge )
+    {
+        var list = new List<Scanline>(edge.Count);
+        for ( int i = 0 ; i < edge.Count ; i += 2 )
+        {
+            Vector3 line = edge[ i ];
+            Vector3 nextPoint = edge[ i + 1 ];
+            //Debug.Assert( line.y == nextPoint.y , "linex = " + line.y + "nextPointx = " + nextPoint.y);
+            var scan = new Scanline()
             {
-                for ( int i = 0 ; i < edge.Count ; i+=2 )
-                {
-                    Vector3 line = edge[ i ];
-                    Vector3 nextPoint = edge[ i + 1 ];
-                    Debug.Assert( line.y == nextPoint.y , "linex = " + line.y + "nextPointx = " + nextPoint.y);
-                    var scan = new Scanline()
-                    {
-                        X = (int)line.x,
-                        Y = (int)line.y,
-                        W = (int)nextPoint.x - (int)line.x,
-                    };
-                    yield return scan;
-                }
-            }
+                X = (int)line.x,
+                Y = (int)line.y,
+                W = (int)nextPoint.x - (int)line.x,
+            };
+            list.Add( scan );
         }
+        return list;
+    }
+}
     public class FilledPoly
     {
 
@@ -563,7 +577,7 @@ public class FillPolygon //: MonoBehaviour
             EdgePoly.Clear( );
         }
 
-        public IEnumerable<Scanline> InsideLine
+        public List<Scanline> InsideLine
         {
             get
             {
