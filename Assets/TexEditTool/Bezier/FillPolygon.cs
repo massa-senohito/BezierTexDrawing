@@ -542,6 +542,7 @@ public struct Scanline
         {
             Vector3 line = edge[ i ];
             Vector3 nextPoint = edge[ i + 1 ];
+            //Debug.Log(  "ScanlineList : " + TexEditor.FrameCount + " : " + line.y );
             //Debug.Assert( line.y == nextPoint.y , "linex = " + line.y + "nextPointx = " + nextPoint.y);
             var scan = new Scanline()
             {
@@ -553,37 +554,75 @@ public struct Scanline
         }
         return list;
     }
-}
-    public class FilledPoly
-    {
 
-        List<Vector3> InsidePoly = new List<Vector3>();
-        List<Vector3> EdgePoly = new List<Vector3>();
-        public void Add(Vector3 p , bool isInside)
+    public static Color[ ] FillPolyWithColor( List<Vector3> edge , int Size , bool isFill = true)
+    {
+        Color[] baseColor = new Color[Size*Size];
+        for ( int i = 0 ; i < edge.Count ; i += 2 )
         {
-            if(isInside)
+            Vector3 point1 = edge[ i ];
+            Vector3 point2 = edge[ i + 1 ];
+            var x1 = (int)point1.x;
+            var x2 = (int)point2.x;
+            var y  = (int)point1.y;
+            // 最適化のためにこの中で作成
+            // 1024でリアルタイムで濡れるのが目標、1024だとライン出し始めると負荷が出る
+            // Yでソートされているので、同じYで2度以上出てきても計算が安い
+            if ( isFill )
             {
-                InsidePoly.Add( p );
+                for ( int xInd = x1 ; xInd < x2 ; xInd++ )
+                {
+                    baseColor[ xInd + y * Size ] = Color.white;
+                }
             }
             else
             {
-                EdgePoly.Add( p );
+                baseColor[ x1 + y * Size ] = Color.white;
+                baseColor[ x2 + y * Size ] = Color.white;
+
             }
         }
+        return baseColor;
 
-        public void Clear()
+    }
+}
+
+public class FilledPoly
+{
+
+    List<Vector3> InsidePoly = new List<Vector3>();
+    List<Vector3> EdgePoly = new List<Vector3>();
+    public void Add( Vector3 p , bool isInside )
+    {
+        if ( isInside )
         {
-            InsidePoly.Clear( );
-            EdgePoly.Clear( );
+            InsidePoly.Add( p );
         }
-
-        public List<Scanline> InsideLine
+        else
         {
-            get
-            {
-                return Scanline.ScanlineList( InsidePoly );
-            }
+            EdgePoly.Add( p );
         }
     }
+
+    public void Clear( )
+    {
+        InsidePoly.Clear( );
+        EdgePoly.Clear( );
+    }
+
+    // 遅いはず
+    public List<Scanline> InsideLine
+    {
+        get
+        {
+            return Scanline.ScanlineList( InsidePoly );
+        }
+    }
+    // 多分高速版
+    public Color[ ] InsideLineColor( int Size , bool isFill = true)
+    {
+        return Scanline.FillPolyWithColor( InsidePoly , Size , isFill );
+    }
+}
 
 

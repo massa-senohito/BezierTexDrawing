@@ -1,4 +1,4 @@
-﻿#define  CUBETEST
+﻿//#define  CUBETEST
 
 using UnityEngine;
 using System.Linq;
@@ -10,6 +10,7 @@ using Unit =
     EntityBase;
 using Gobj = UnityEngine.GameObject;
 using V3 = UnityEngine.Vector3;
+using UnityEngine.Profiling;
 
 public class BezierPath : MonoBehaviour
 {
@@ -61,7 +62,8 @@ public class BezierPath : MonoBehaviour
 
                 if ( s == 0 )
                 {
-                    pathPoints.Add( BezierPathCalculation( p0 , p1 , p2 , p3 , 0.0f ) );
+                    V3 item = BezierPathCalculation( p0 , p1 , p2 , p3 , 0.0f );
+                    pathPoints.Add( item );
                 }
 
                 for ( int p = 0 ; p < ( pointCount / segments ) ; p++ )
@@ -459,6 +461,56 @@ public class BezierPath : MonoBehaviour
     Unit[,] TestCubeList ;
 #endif
 
+    public bool IsContain(V3 worldPos)
+    {
+        var isin = PathSelector.Contains( path.pathPoints , worldPos );
+        return isin == PathSelector.InOut.IN;
+    }
+
+    FillPolygon FilledPoly = new FillPolygon();
+    List<V3> mappedPoints = new List<V3>();
+    public
+        //List<Scanline>
+        Color[]
+        FillPoly(System.Func<V3,V3> mapper)
+    {
+        CustomSampler createList = CustomSampler.Create("createList");
+        createList.Begin( );
+
+        mappedPoints.Clear( );
+        foreach ( var item in path.pathPoints )
+        {
+            mappedPoints.Add( mapper( item ) );
+        }
+
+        createList.End( );
+
+        CustomSampler fillpoly = CustomSampler.Create("MakeFilledPoly");
+        fillpoly.Begin( );
+        // 範囲外のポリゴンを渡さないと形がかわる、
+        var fill = FilledPoly.MakeFilledPoly( 
+            //path.pathPoints
+            mappedPoints
+            );
+        fillpoly.End( );
+
+        //return fill.InsideLine;
+        return fill.InsideLineColor( TexEditor.Size , false);
+    }
+
+    public Color[] StrokePath(System.Func<V3,V3> mapper)
+    {
+        var mapPoints = new List<V3>();
+        foreach ( var item in path.pathPoints )
+        {
+            mapPoints.Add( mapper( item ) );
+        }
+        //var stroke = new StrokePath();
+        return global::StrokePath.MakePixel( mapPoints , TexEditor.Size );
+
+    }
+
+
     public void FixedUpdate( )
     {
         InputState = State.InputState;
@@ -509,7 +561,7 @@ public class BezierPath : MonoBehaviour
         }
 
     }
-
+/*
     void OnDrawGizmos( )
     {
         // これで消してしまう
@@ -527,4 +579,5 @@ public class BezierPath : MonoBehaviour
             Gizmos.DrawLine( startv , endv );
         }
     }
+*/
 }

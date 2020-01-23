@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using Optional;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -7,6 +8,40 @@ public class EntityBase : MonoBehaviour
     //public abstract void OnJustClick( HandBoneController controller);
     // マウスクリック反応を実装するなら
     public virtual void OnJustClick( ) { }
+
+    public static string __Function( )
+    {
+#if DEBUG
+        var stackTrace = new System.Diagnostics.StackTrace();
+        return stackTrace.GetFrame( 1 ).GetMethod( ).Name;
+#else
+        return "";
+#endif
+    }
+
+    public void SetTransparent()
+    {
+
+        var mayMat = GetMaterial( );
+        var trans = Shader.Find("UI/Lit/Transparent");
+        mayMat.Match( m => m.shader = trans , () => Debug.Log("shader not found"));
+    }
+
+    public Option<Material> GetMaterial()
+    {
+        var renderer = GetComponent<MeshRenderer>( );
+        if ( renderer )
+        {
+
+            return renderer.material.Some();
+        }
+        var skinRend = GetComponent<SkinnedMeshRenderer>();
+        if(skinRend)
+        {
+            return skinRend.material.Some();
+        }
+        return Option.None<Material>( );
+    }
 
     public void SetColor(Color color)
     {

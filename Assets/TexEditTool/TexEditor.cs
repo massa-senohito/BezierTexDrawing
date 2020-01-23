@@ -1,29 +1,52 @@
-﻿#define EDITOR
-using System.Collections;
+﻿//#define MOUSEDEBUG
+#define SCANLINE
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using System.IO;
 using System.Linq;
+using UnityEngine.Profiling;
 
 public class TexEditor : MonoBehaviour {
     Texture2D EditTex;
+
     [SerializeField]
     Material TexMat;
-    int Size = 16;
+
+    public const int Size = 
+        16;
+        //2048;
+        //1024;
+        //512;
+        //256;
+        //32;
+
+    [SerializeField]
+    BezierPath Path;
 
     string TexPath()
     {
         var path = "";
         var editTex = (Texture2D)TexMat.mainTexture;
-#if EDITOR
+#if UNITY_EDITOR
         path = AssetDatabase.GetAssetPath( editTex );
 #endif
         return path;
     }
 
+#region FPS_COUNT
+    // https://www.sejuku.net/blog/82841
+    int frameCount;
+    float prevTime;
+    float fps;
+#endregion
     void Start( )
     {
+        #region FPS_COUNT
+        frameCount = 0;
+        prevTime = 0.0f;
+        #endregion
+
         var editTex = (Texture2D)TexMat.mainTexture;
         if ( editTex == null )
         {
@@ -37,6 +60,9 @@ public class TexEditor : MonoBehaviour {
             var fileData = File.ReadAllBytes( path );
             EditTex.LoadImage( fileData );
         }
+        TexDataList = new Color[ EditTex.width * EditTex.height ];
+        BaseColor = Enumerable.Range(0 , Size * Size).Select(i => Color.red).ToArray();
+        FillColor =  Enumerable.Range(0 , Size * Size).Select(i => Color.green).ToArray();
         MakeTextTexture( );
     }
 
@@ -49,21 +75,152 @@ public class TexEditor : MonoBehaviour {
         TexMat.mainTexture = EditTex;
     }
 
+    Vector3 WorldToPixel( Vector3 pos )
+    {
+        // ポリゴン化したパスのワールド座標が来る
+        // テクスチャのピクセル座標系に射影する
+        var localMat = transform.worldToLocalMatrix;
+        var localPos = localMat.MultiplyPoint(pos);
+
+        // 左上 -0.5 0.5 migisita 0.5 -0.5
+        var offset = new Vector3
+            (
+            ( localPos.x + 0.5f ) * Size,
+            ( localPos.y + 0.5f ) * Size, 0);
+        //Debug.Log( "Mapper offset : " + offset );
+        return offset;
+    }
+
+    Color[] BaseColor;
+    Color[] FillColor;
+    Color[] TexDataList;
+    public static int FrameCount;
+    // 1024なら5がちょうど
+    int SkipCount = 1;
+
     // Update is called once per frame
     void FixedUpdate( )
     {
+        FrameCount++;
+        // 最初の200フレームはロードで負荷がかかる
+        bool isSlow = fps < 30.0f;
+        if( isSlow 
+            //&& FrameCount > 30
+            )
+        {
+            if ( FrameCount % 15 == 0 )
+            {
+                SkipCount++;
+                //Debug.Log( $"TexEditor SkipAdd : {SkipCount} fps {fps} FrameCount {FrameCount}" );
+            }
+        }
+        if(FrameCount % SkipCount != 0)
+        {
+            return;
+        }
+#if MOUSEDEBUG
         Vector3 screenPos = Input.mousePosition;
         Vector3 worldPos = Camera.main.ScreenToWorldPoint(screenPos);
-        var canvusLocal  = transform.worldToLocalMatrix;
-        var canvusCenter = canvusLocal.MultiplyPoint(worldPos);
-        var canvusCord = canvusCenter + new Vector3(0.5f , -0.5f , 1.6f);
-        //Debug.Log( canvusCord );
-        var xPos = canvusCord.x * Size;
-        var yPos = canvusCord.y * Size -1.0f;
-        Debug.Log( xPos  + "," + yPos);
-        EditTex.SetPixel( (int)xPos , (int)yPos , Color.green );
+        Debug.Log( worldPos );
+        DrawTexByWorld(worldPos);
+#endif
+#if SCANLINE
+
+        CustomSampler sampler = CustomSampler.Create("fillpoly");
+        CustomSampler setPixelSample = CustomSampler.Create("setPixelSample");
+        //"パスをピクセル空間に持っていく"
+        // AddPointするときに持っていく -> AddPoint座標系が複雑になる
+        // ここらで32倍 -> 2回Addしちゃうが大きく負荷はなかった
+        sampler.Begin( );
+        var enumerable = 
+            //Path.FillPoly( WorldToPixel );
+            Path.StrokePath(WorldToPixel);
+        sampler.End( );
+
+        setPixelSample.Begin( );
+#if NOOPE
+        EditTex.SetPixels( BaseColor , 0 );
+        for ( int i = 0 ; i < enumerable.Count ; i++ )
+        {
+            Scanline item = enumerable[ i ];
+            //Debug.Log( "itemW =" + item.W );
+            //var colorList = Enumerable.Range( 0 , item.W ).Select( i => Color.green ).ToArray();
+
+            int v = item.X + item.W;
+            bool xInBound = 0 < item.X && v < Size;
+            bool yInBound = 0 < item.Y && item.Y < Size;
+
+            if ( xInBound && yInBound )
+            {
+                EditTex.SetPixels( item.X , item.Y , item.W , 1 , FillColor );
+            }
+        }
+        //EditTex.SetPixels( BaseColor , 0 );
+#else
+        EditTex.SetPixels( enumerable , 0 );
+#endif
+        setPixelSample.End( );
+#else
+        int height = EditTex.height;
+        // 1の大きさになる
+        for ( int y = 0 ; y < height ; y++ )
+        {
+            int width = EditTex.width;
+            for ( int x = 0 ; x < width ; x++ )
+            {
+                var widOff = x / (float)width;
+                var heiOff = y / (float)height;
+                var localPos = new Vector3(widOff - 0.5f , heiOff - 0.5f , 0);
+                var worldMat = transform.localToWorldMatrix;
+                var worldPos = worldMat.MultiplyPoint(localPos);
+                var drawColor = Color.green;
+                if ( Path.IsContain( worldPos ) )
+                {
+                    drawColor = Color.red;
+                }
+                TexDataList[ x + height * y ] = drawColor;
+            }
+        }
+        EditTex.SetPixels( TexDataList );
+#endif
         EditTex.Apply( );
     }
+
+    #region FPS_COUNT
+    void Update( )
+    {
+        frameCount++;
+        float time = Time.realtimeSinceStartup - prevTime;
+
+        if ( time >= 0.5f )
+        {
+            fps = frameCount / time;
+            //Debug.Log( fps );
+
+            frameCount = 0;
+            prevTime = Time.realtimeSinceStartup;
+        }
+    }
+    #endregion
+
+    private void DrawTexByWorld( Vector3 worldPos )
+    {
+        Vector3 canvasCord = GetCanvasCord( worldPos );
+        //Debug.Log( canvusCord );
+        var xPos = canvasCord.x * Size;
+        var yPos = canvasCord.y * Size -1.0f;
+        //Debug.Log( xPos + "," + yPos );
+        EditTex.SetPixel( ( int )xPos , ( int )yPos , Color.green );
+    }
+
+    private Vector3 GetCanvasCord( Vector3 worldPos )
+    {
+        var canvasLocal  = transform.worldToLocalMatrix;
+        var canvasCenter = canvasLocal.MultiplyPoint(worldPos);
+        var canvasCord = canvasCenter + new Vector3(0.5f , -0.5f , 1.6f);
+        return canvasCord;
+    }
+
     private void OnDestroy( )
     {
         var png = EditTex.EncodeToPNG( );
