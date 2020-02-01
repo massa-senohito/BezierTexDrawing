@@ -469,10 +469,7 @@ public class BezierPath : MonoBehaviour
 
     FillPolygon FilledPoly = new FillPolygon();
     List<V3> mappedPoints = new List<V3>();
-    public
-        //List<Scanline>
-        Color[]
-        FillPoly(System.Func<V3,V3> mapper)
+    public Color[ ] FillPoly( System.Func<V3 , V3> mapper )
     {
         CustomSampler createList = CustomSampler.Create("createList");
         createList.Begin( );
@@ -481,6 +478,11 @@ public class BezierPath : MonoBehaviour
         foreach ( var item in path.pathPoints )
         {
             mappedPoints.Add( mapper( item ) );
+        }
+        if ( path.pathPoints.Count > 0 )
+        {
+            // 最初と繋げないと囲まれない
+            mappedPoints.Add( mapper( path.pathPoints[ 0 ] ) );
         }
 
         createList.End( );
@@ -495,21 +497,77 @@ public class BezierPath : MonoBehaviour
         fillpoly.End( );
 
         //return fill.InsideLine;
-        return fill.InsideLineColor( TexEditor.Size , false);
+        return fill.InsideLineColor( TexEditor.Size );
     }
 
-    public Color[] StrokePath(System.Func<V3,V3> mapper)
+    [SerializeField]
+    bool IsThickPath;
+    [SerializeField]
+    int LineWidth = 5;
+
+    StrokePath Stroke = new global::StrokePath(TexEditor.Size);
+
+    public Color[] StrokePathOld(System.Func<V3,V3> mapper)
     {
         var mapPoints = new List<V3>();
         foreach ( var item in path.pathPoints )
         {
             mapPoints.Add( mapper( item ) );
         }
-        //var stroke = new StrokePath();
-        return global::StrokePath.MakePixel( mapPoints , TexEditor.Size );
-
+        return Stroke.MakePixel( mapPoints , IsThickPath , LineWidth);
     }
 
+    public string SVGData(System.Func<V3,V3> mapper)
+    {
+        var mapPoints = new List<V3>();
+        var stringBuilder = new System.Text.StringBuilder(
+            $"<?xml version=\"1.0\" standalone=\"no\"?>" +
+            $"<svg width=\"{TexEditor.Size}px\" height=\"{TexEditor.Size}px\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\">\n" +
+            "  <path id =\"noname\"\n" +
+            "         fill=\"none\"\n"
+            );
+
+        var firstObj = mapper( objects[0].GetPos() );
+        stringBuilder.Append( $"d=\"M {firstObj.x},{TexEditor.Size - firstObj.y}\n   C " );
+        for ( int i = 1 ; i < objects.Count ; i+=3 )
+        {
+            var item = objects[i].GetPos();
+            var mpos = mapper( item );
+            stringBuilder.Append( $" {( int )mpos.x},{TexEditor.Size - ( int )mpos.y} " );
+            if( Unit.IsRange( objects , i + 1 ) )
+            {
+                var c1 = mapper( objects[i + 1].GetPos() );
+                stringBuilder.Append( $"{( int )c1.x},{TexEditor.Size - ( int )c1.y} " );
+            }
+            if( Unit.IsRange( objects , i + 2 ) )
+            {
+                var c2 = mapper( objects[i + 2].GetPos() );
+                stringBuilder.Append( $"{( int )c2.x},{TexEditor.Size - ( int )c2.y} " );
+            }
+            //if( Unit.IsRange( objects , i + 3 ) )
+            //{
+            //    var c3 = mapper( objects[i + 3].GetPos() );
+            //    stringBuilder.Append( $"{( int )c3.x},{TexEditor.Size - ( int )c3.y}" );
+            //}
+
+            stringBuilder.Append( "\n" );
+        }
+
+        return stringBuilder.ToString() +
+            //$"<path d=\"M10 10 C 20 20, 40 20, 50 10\" stroke=\"black\" fill=\"transparent\"/>" +
+            " \" />\n</svg>";
+    }
+
+    public void StrokePathOCV( System.Func<V3,V3> mapper , Texture2D editTex)
+    {
+        var mapPoints = new List<V3>();
+        foreach ( var item in path.pathPoints )
+        {
+            mapPoints.Add( mapper( item ) );
+        }
+
+        OCVStrokePath.MakePixel( mapPoints , LineWidth , editTex );
+    }
 
     public void FixedUpdate( )
     {

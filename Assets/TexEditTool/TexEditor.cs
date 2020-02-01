@@ -12,14 +12,18 @@ public class TexEditor : MonoBehaviour {
 
     [SerializeField]
     Material TexMat;
+    [SerializeField]
+    Material ModelMat;
 
     public const int Size = 
-        16;
+        //16;
         //2048;
         //1024;
-        //512;
-        //256;
-        //32;
+        512;
+    private const string Path1 = "svgExported.txt";
+
+    //256;
+    //32;
 
     [SerializeField]
     BezierPath Path;
@@ -60,12 +64,16 @@ public class TexEditor : MonoBehaviour {
             var fileData = File.ReadAllBytes( path );
             EditTex.LoadImage( fileData );
         }
+
         TexDataList = new Color[ EditTex.width * EditTex.height ];
-        BaseColor = Enumerable.Range(0 , Size * Size).Select(i => Color.red).ToArray();
+        BaseColor = Enumerable.Range(0 , Size * Size).Select(i => Color.black).ToArray();
         FillColor =  Enumerable.Range(0 , Size * Size).Select(i => Color.green).ToArray();
-        MakeTextTexture( );
+        //MakeTextTexture( );
+        TexMat.mainTexture = EditTex;
+        ModelMat.mainTexture = EditTex;
     }
 
+    // テスト用
     private void MakeTextTexture( )
     {
         var color = Enumerable.Range(0 , Size * Size).Select(i => Random.ColorHSV());
@@ -73,6 +81,19 @@ public class TexEditor : MonoBehaviour {
         EditTex.SetPixels(color.ToArray() , 0 );
         EditTex.Apply( );
         TexMat.mainTexture = EditTex;
+    }
+
+    Vector3 PixelToWorld(Vector3 pos)
+    {
+        var worldMat = transform.localToWorldMatrix;
+
+        var worldPos = worldMat.MultiplyPoint(pos / Size);
+        var offset = new Vector3
+            (
+            (   worldPos.x - 1.0f ) ,
+            ( - worldPos.y + 1.0f ) , 0);
+
+        return offset;
     }
 
     Vector3 WorldToPixel( Vector3 pos )
@@ -97,10 +118,13 @@ public class TexEditor : MonoBehaviour {
     public static int FrameCount;
     // 1024なら5がちょうど
     int SkipCount = 1;
+    [SerializeField]
+    bool IsFill;
 
     // Update is called once per frame
     void FixedUpdate( )
     {
+        #region FrameSkip
         FrameCount++;
         // 最初の200フレームはロードで負荷がかかる
         bool isSlow = fps < 30.0f;
@@ -118,6 +142,8 @@ public class TexEditor : MonoBehaviour {
         {
             return;
         }
+        #endregion
+
 #if MOUSEDEBUG
         Vector3 screenPos = Input.mousePosition;
         Vector3 worldPos = Camera.main.ScreenToWorldPoint(screenPos);
@@ -131,13 +157,15 @@ public class TexEditor : MonoBehaviour {
         //"パスをピクセル空間に持っていく"
         // AddPointするときに持っていく -> AddPoint座標系が複雑になる
         // ここらで32倍 -> 2回Addしちゃうが大きく負荷はなかった
-        sampler.Begin( );
-        var enumerable = 
-            //Path.FillPoly( WorldToPixel );
-            Path.StrokePath(WorldToPixel);
-        sampler.End( );
+        if ( IsFill )
+        {
+            sampler.Begin( );
+            var colorList =
+                Path.FillPoly( WorldToPixel );
+                //Path.StrokePath( WorldToPixel );
+            sampler.End( );
 
-        setPixelSample.Begin( );
+            setPixelSample.Begin( );
 #if NOOPE
         EditTex.SetPixels( BaseColor , 0 );
         for ( int i = 0 ; i < enumerable.Count ; i++ )
@@ -157,9 +185,9 @@ public class TexEditor : MonoBehaviour {
         }
         //EditTex.SetPixels( BaseColor , 0 );
 #else
-        EditTex.SetPixels( enumerable , 0 );
+            EditTex.SetPixels( colorList , 0 );
 #endif
-        setPixelSample.End( );
+            setPixelSample.End( );
 #else
         int height = EditTex.height;
         // 1の大きさになる
@@ -183,12 +211,18 @@ public class TexEditor : MonoBehaviour {
         }
         EditTex.SetPixels( TexDataList );
 #endif
-        EditTex.Apply( );
+            EditTex.Apply( );
+        }
+        else
+        {
+            EditTex.SetPixels( BaseColor );
+            Path.StrokePathOCV( WorldToPixel , EditTex );
+        }
     }
 
-    #region FPS_COUNT
     void Update( )
     {
+        #region FPS_COUNT
         frameCount++;
         float time = Time.realtimeSinceStartup - prevTime;
 
@@ -200,8 +234,43 @@ public class TexEditor : MonoBehaviour {
             frameCount = 0;
             prevTime = Time.realtimeSinceStartup;
         }
+        #endregion
+
+        if ( Input.GetKeyDown( KeyCode.S ) )
+        {
+            File.WriteAllText( Path1 , Path.SVGData( WorldToPixel ) );
+        }
+        if ( Input.GetKeyDown( KeyCode.L ) )
+        {
+            OnLoadSVG( Path1 );
+        }
     }
-    #endregion
+
+    private void OnPos( string csv )
+    {
+        var posList = csv.Split( ',' ).Select(float.Parse).ToArray();
+        var pos = PixelToWorld( 
+            new Vector3( posList[ 0 ] , posList[ 1 ] , 0 ) 
+            )
+            ;
+        BezierPath.SpawnCube( pos );
+    }
+    void OnLoadSVG(string path)
+    {
+        //var allText = File.ReadAllText( path );
+        //var indOfFirstM = allText.IndexOf( "d=\"" );
+        //if ( indOfFirstM == -1 )
+        //{
+        //    Debug.Log( "svg not contain d element. load failed." );
+        //    return;
+        //}
+        var maySv = Svg.load( path );
+        if(maySv.IsRight)
+        {
+            Debug.Log( "loaded" );
+        }
+        maySv.Case( ls=> Svg.mapData(ls, OnPos), er => Debug.Log( er.ToString( ) ) );
+    }
 
     private void DrawTexByWorld( Vector3 worldPos )
     {
@@ -225,6 +294,5 @@ public class TexEditor : MonoBehaviour {
     {
         var png = EditTex.EncodeToPNG( );
         File.WriteAllBytes( "textWriteTex.png" , png );
-
     }
 }

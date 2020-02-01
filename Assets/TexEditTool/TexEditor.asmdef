@@ -1,7 +1,8 @@
 {
     "name": "TexEditor",
     "references": [
-        "GUID:560b04d1a97f54a4e82edc0cbbb69285"
+        "GUID:560b04d1a97f54a4e82edc0cbbb69285",
+        "GUID:5cfdee3d982525f4aa7a37400aa3ea71"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -10,5 +11,6 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": []
+    "versionDefines": [],
+    "noEngineReferences": false
 }

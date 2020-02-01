@@ -125,6 +125,10 @@ public class EntityBase : MonoBehaviour
         transform.localScale = new Vector3( x , x , x );
     }
 
+    public static bool IsRange<T>(List<T> self , int index)
+    {
+        return 0 <= index && index < self.Count;
+    }
 
     public void Log(object log)
     {
