@@ -260,7 +260,7 @@ public class BezierPath : MonoBehaviour
             }
         }
 
-        Option<Unit> TryGetPreHandle()
+        public Option<Unit> TryGetPreHandle()
         {
             if(HandleObjList.Length == 3)
             {
@@ -269,7 +269,7 @@ public class BezierPath : MonoBehaviour
             return HandleObjList[ 0 ].None( );
         }
 
-        Unit GetNextHandle( )
+        public Unit GetNextHandle( )
         {
             if ( HandleObjList.Length == 2 )
             {
@@ -317,14 +317,20 @@ public class BezierPath : MonoBehaviour
         AddPointAndHandle( collection1 );
     }
 
-    private void AddPointAndHandle( Unit[ ] collection )
+    private void AddPointAndHandle( Unit[ ] addedPointHandleList )
     {
 
-        IDHandleMap.Add( Counter , new HandleContainer( collection ) );
-        objects.AddRange( collection );
+        foreach ( var item in IDHandleMap)
+        {
+            item.Value.TryGetPreHandle( ).MatchSome( u => u.SetActive( false ) );
+            item.Value.GetNextHandle( ).SetActive( false );
+        }
+        IDHandleMap.Add( Counter , new HandleContainer( addedPointHandleList ) );
+
+        objects.AddRange( addedPointHandleList );
         Counter++;
         // 他のクリックされていないオブジェクトを消す
-        UpdateSelection( collection[ 0 ].name );
+        UpdateSelection( addedPointHandleList[ 0 ].name );
     }
 
     void MoveLastHandle(V3 world)
@@ -361,7 +367,7 @@ public class BezierPath : MonoBehaviour
     private void UpdateSelection( string nameId )
     {
         var id = 0;
-        // クリックされてないオブジェクトをすべて消す
+        // クリックされてないアクティブだったオブジェクトを消す
         MayActiveBezierId.MatchSome
             ( SetDeactive );
 
