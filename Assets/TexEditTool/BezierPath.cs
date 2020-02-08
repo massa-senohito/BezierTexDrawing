@@ -209,7 +209,7 @@ public class BezierPath : MonoBehaviour
         return nearestObj;
     }
 
-    public static float CameraOffset = 2;
+    public static float CameraOffset = -2;
 
     public static Unit SpawnCube( V3 pos )
     {
@@ -228,7 +228,7 @@ public class BezierPath : MonoBehaviour
     }
 
     int Counter = 0;
-    class HandleContainer
+    public class HandleContainer
     {
         Unit[] HandleObjList;
         public HandleContainer(Unit[] objects)
@@ -284,7 +284,28 @@ public class BezierPath : MonoBehaviour
     Dictionary< int , HandleContainer > IDHandleMap 
         = new Dictionary< int , HandleContainer >();
 
-    void AddPathPoint(V3 pos)
+    private void DeactivateHandles( )
+    {
+        foreach ( var item in IDHandleMap )
+        {
+            //item.Value.Point( ).SetActive( false );
+            item.Value.TryGetPreHandle( ).MatchSome( u => u.SetActive( false ) );
+            item.Value.GetNextHandle( ).SetActive( false );
+        }
+    }
+
+    void ActivateHandle(Unit selectedUnit)
+    {
+        foreach ( var item in IDHandleMap )
+        {
+            item.Value.Point( ).SetColor( Color.blue );
+            item.Value.TryGetPreHandle( ).MatchSome( u => u.SetColor( Color.white) );
+            item.Value.GetNextHandle( ).SetColor( Color.white );
+        }
+        selectedUnit.SetColor( Color.green );
+    }
+
+    public HandleContainer AddPathPoint(V3 pos)
     {
         // その箇所に橋とハンドル追加、trlお品柄だと点対象位置にハンドルを移動
         // 点対象位置は中心 * 2 - 移動先
@@ -299,8 +320,8 @@ public class BezierPath : MonoBehaviour
                 cpoint1 ,
                 handle01 ,
             };
-            AddPointAndHandle( collection );
-            return;
+            var pointHandle = AddPointAndHandle( collection );
+            return pointHandle;
         }
 
         var cpoint = SpawnCube(pos);
@@ -314,23 +335,21 @@ public class BezierPath : MonoBehaviour
             cpoint ,
             handle1 ,
         };
-        AddPointAndHandle( collection1 );
+        var pointHandle1 = AddPointAndHandle( collection1 );
+        return pointHandle1;
     }
 
-    private void AddPointAndHandle( Unit[ ] addedPointHandleList )
+    private HandleContainer AddPointAndHandle( Unit[ ] addedPointHandleList )
     {
-
-        foreach ( var item in IDHandleMap)
-        {
-            item.Value.TryGetPreHandle( ).MatchSome( u => u.SetActive( false ) );
-            item.Value.GetNextHandle( ).SetActive( false );
-        }
-        IDHandleMap.Add( Counter , new HandleContainer( addedPointHandleList ) );
+        DeactivateHandles( );
+        HandleContainer handleCont = new HandleContainer( addedPointHandleList );
+        IDHandleMap.Add( Counter , handleCont );
 
         objects.AddRange( addedPointHandleList );
         Counter++;
         // 他のクリックされていないオブジェクトを消す
         UpdateSelection( addedPointHandleList[ 0 ].name );
+        return handleCont;
     }
 
     void MoveLastHandle(V3 world)
@@ -356,6 +375,7 @@ public class BezierPath : MonoBehaviour
     void OnActiveObjChanged(Unit unit)
     {
         var nameIDList = unit.name.Split( ',' );
+        ActivateHandle( unit );
         if ( nameIDList.Length == 0 )
         {
             Debug.LogError( "name not contain ," + unit.name);

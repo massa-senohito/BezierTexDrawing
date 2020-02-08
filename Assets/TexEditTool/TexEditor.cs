@@ -6,6 +6,10 @@ using UnityEditor;
 using System.IO;
 using System.Linq;
 using UnityEngine.Profiling;
+using Unit =
+    //UnityEngine.GameObject;
+    EntityBase;
+
 
 public class TexEditor : MonoBehaviour {
     Texture2D EditTex;
@@ -83,15 +87,17 @@ public class TexEditor : MonoBehaviour {
         TexMat.mainTexture = EditTex;
     }
 
+    [SerializeField] float MoveDist = 1.0f;
     Vector3 PixelToWorld(Vector3 pos)
     {
         var worldMat = transform.localToWorldMatrix;
 
-        var worldPos = worldMat.MultiplyPoint(pos / Size);
+        var worldPos = worldMat.MultiplyPoint(pos /Size) ;
+        // 座標や行列を全部出してみよう
         var offset = new Vector3
             (
-            (   worldPos.x - 1.0f ) ,
-            ( - worldPos.y + 1.0f ) , 0);
+            (   worldPos.x - 0.5f ) ,
+            ( - worldPos.y + 0.5f ) , 0);
 
         return offset;
     }
@@ -103,12 +109,13 @@ public class TexEditor : MonoBehaviour {
         var localMat = transform.worldToLocalMatrix;
         var localPos = localMat.MultiplyPoint(pos);
 
+        var offVal = 0.5f;
         // 左上 -0.5 0.5 migisita 0.5 -0.5
         var offset = new Vector3
             (
-            ( localPos.x + 0.5f ) * Size,
-            ( localPos.y + 0.5f ) * Size, 0);
-        //Debug.Log( "Mapper offset : " + offset );
+            ( localPos.x + offVal ) * Size,
+            ( localPos.y + offVal ) * Size, 0);
+
         return offset;
     }
 
@@ -246,15 +253,33 @@ public class TexEditor : MonoBehaviour {
         }
     }
 
-    private void OnPos( string csv )
+    private void OnLoaded( string[] lineList)
     {
-        var posList = csv.Split( ',' ).Select(float.Parse).ToArray();
-        var pos = PixelToWorld( 
-            new Vector3( posList[ 0 ] , posList[ 1 ] , 0 ) 
-            )
-            ;
-        BezierPath.SpawnCube( pos );
+        int i = 0;
+        BezierPath.HandleContainer pointHandleList = null;
+        foreach ( var csv in lineList )
+        {
+            if ( csv.Contains( "," ) )
+            {
+                var posList = csv.Split( ',' ).Select(float.Parse).ToArray();
+                var pos = PixelToWorld(
+                    new Vector3( posList[ 0 ] , posList[ 1 ] , 0 )
+                );
+                bool isPoint = i % 2 == 0;
+                if ( isPoint )
+                {
+                    pointHandleList = Path.AddPathPoint( pos );
+                }
+                else
+                {
+                    pointHandleList.TryGetPreHandle( ).MatchSome( handle => handle.SetPos( pos ) );
+                    pointHandleList.GetNextHandle( ).SetPos( pos );
+                }
+                i++;
+            }
+        }
     }
+
     void OnLoadSVG(string path)
     {
         //var allText = File.ReadAllText( path );
@@ -269,7 +294,7 @@ public class TexEditor : MonoBehaviour {
         {
             Debug.Log( "loaded" );
         }
-        maySv.Case( ls=> Svg.mapData(ls, OnPos), er => Debug.Log( er.ToString( ) ) );
+        maySv.Case( OnLoaded , er => Debug.Log( er.ToString( ) ) );
     }
 
     private void DrawTexByWorld( Vector3 worldPos )
